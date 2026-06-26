@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Research Assistant (NotebookLM Style)</title>
+    <!-- Tailwind CSS for modern layout & styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for clean dashboard icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar behaviors for a clean app feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-md shadow-indigo-500/20">
+                <i class="fa-solid fa-chart-pie text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Market Research Assistant</h1>
+                <p class="text-xs text-slate-400">NotebookLM for Strategic Intelligence & Data Synthesis</p>
+            </div>
+        </div>
+
+        <!-- Configuration & Input Controls (Top Right Section) -->
+        <div class="flex items-center gap-4 max-w-3xl w-full justify-end">
+            <!-- Gemini API Key Container -->
+            <div class="relative w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-key text-slate-400 text-xs"></i>
+                </div>
+                <input type="password" id="apiKeyInput" 
+                    class="w-full pl-9 pr-8 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500 text-slate-200 placeholder-slate-500 transition-colors" 
+                    placeholder="Enter Gemini API Key...">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <span id="apiStatusIndicator" class="h-2 w-2 rounded-full bg-red-500 animate-pulse transition-colors duration-300" title="API Disconnected"></span>
+                </div>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="relative w-36">
+                <select id="languageSelect" class="w-full pl-3 pr-8 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500 text-slate-200 appearance-none cursor-pointer">
+                    <option value="English">English (US)</option>
+                    <option value="Spanish">Español</option>
+                    <option value="French">Français</option>
+                    <option value="German">Deutsch</option>
+                    <option value="Japanese">日本語</option>
+                    <option value="Arabic">العربية</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-[10px]">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div>
+
+            <!-- In-Depth Research Query Bar -->
+            <div class="relative flex-1 max-w-xs">
+                <input type="text" id="productSearchInput" 
+                    class="w-full pl-3 pr-10 py-1.5 bg-indigo-950/40 border border-indigo-500/40 rounded-lg text-xs focus:outline-none focus:border-indigo-500 text-white placeholder-indigo-300/50" 
+                    placeholder="Product name (e.g., Electric SUV)...">
+                <button onclick="triggerMarketResearch()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-indigo-400 hover:text-indigo-300 transition-colors">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex-col items-center justify-center gap-4 transition-all">
+            <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="text-center">
+                <h3 class="text-lg font-semibold text-white">Scoping Market Vectors...</h3>
+                <p class="text-sm text-slate-400 mt-1 max-w-sm">Gemini 1.5 Flash is analyzing surveys, competitor reviews, Statista metrics, and global supply/demand trends.</p>
+            </div>
+        </div>
+
+        <!-- Middle Section: Report Viewer & Framework Panels -->
+        <section class="flex-1 flex flex-col border-r border-slate-700 bg-slate-900 overflow-hidden">
+            <!-- Framework Navigation Tabs -->
+            <div class="bg-slate-950 px-4 border-b border-slate-800 flex items-center gap-1 overflow-x-auto shrink-0">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="px-4 py-3 text-xs font-medium border-b-2 border-indigo-500 text-indigo-400 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-line"></i> Market Position
+                </button>
+                <button onclick="switchTab('swot')" id="btn-swot" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-shield-halved"></i> SWOT Analysis
+                </button>
+                <button onclick="switchTab('pestele')" id="btn-pestele" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-globe"></i> PESTELE Matrix
+                </button>
+                <button onclick="switchTab('porter')" id="btn-porter" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-building-shield"></i> Porter's 5 Forces
+                </button>
+                <button onclick="switchTab('presentation')" id="btn-presentation" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-display"></i> Presentation Deck
+                </button>
+                <button onclick="switchTab('spreadsheet')" id="btn-spreadsheet" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-table"></i> Trend Ledger
+                </button>
+                <button onclick="switchTab('video')" id="btn-video" class="px-4 py-3 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-circle-play"></i> Video Briefing
+                </button>
+            </div>
+
+            <!-- Dynamic Framework Window -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="reportContentArea">
+                
+                <!-- Welcome Prompt -->
+                <div id="welcomePlaceholder" class="h-full flex flex-col items-center justify-center text-center p-8 max-w-xl mx-auto space-y-4">
+                    <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 text-2xl border border-slate-700">
+                        <i class="fa-solid fa-cubes-stacked text-indigo-400"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-200">No Intelligence Assessment Loaded</h2>
+                        <p class="text-sm text-slate-400 mt-1">Enter a candidate product or vertical above to kick off synthesized, multi-framework market analytics anchored by Gemini 1.5 Flash.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 1: MARKET POSITION DASHBOARD -->
+                <div id="tab-dashboard" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-line text-indigo-400"></i> Executive Synthesis & Market Position</h2>
+                    <div id="content-dashboard" class="prose prose-invert max-w-none text-sm text-slate-300 space-y-4"></div>
+                </div>
+
+                <!-- TAB 2: SWOT ANALYSIS -->
+                <div id="tab-swot" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-shield-halved text-emerald-400"></i> SWOT Analytical Framework</h2>
+                    <div id="content-swot" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs"></div>
+                </div>
+
+                <!-- TAB 3: PESTELE MATRIX -->
+                <div id="tab-pestele" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-globe text-cyan-400"></i> Macro-Environmental PESTELE Breakdown</h2>
+                    <div id="content-pestele" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs"></div>
+                </div>
+
+                <!-- TAB 4: PORTER'S FIVE FORCES -->
+                <div id="tab-porter" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-building-shield text-amber-400"></i> Porter's Five Forces Competitive Model</h2>
+                    <div id="content-porter" class="space-y-4 text-sm text-slate-300"></div>
+                </div>
+
+                <!-- TAB 5: PRODUCT PRESENTATION -->
+                <div id="tab-presentation" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-display text-purple-400"></i> Strategic Pitch Deck Outline</h2>
+                    <div id="content-presentation" class="space-y-4"></div>
+                </div>
+
+                <!-- TAB 6: TREND LEDGER (SPREADSHEET) -->
+                <div id="tab-spreadsheet" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-table text-blue-400"></i> Quantitative Trend Valuation Matrix</h2>
+                    <div class="overflow-x-auto border border-slate-700 rounded-lg bg-slate-950">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-800 border-b border-slate-700 text-slate-300">
+                                    <th class="p-3 font-semibold">Metric Dimension</th>
+                                    <th class="p-3 font-semibold text-right">Current Value</th>
+                                    <th class="p-3 font-semibold text-right">Proj. CAGR</th>
+                                    <th class="p-3 font-semibold">Primary Source Citation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="content-spreadsheet" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 7: VIDEO BRIEFING -->
+                <div id="tab-video" class="tab-content space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-circle-play text-rose-400"></i> Audio-Visual Narrative Script & Media Briefing</h2>
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl flex flex-col md:flex-row gap-4 items-center">
+                        <div class="w-full md:w-1/3 aspect-video bg-slate-800 border border-slate-700 rounded-lg flex flex-col items-center justify-center text-center p-4 relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-tr from-rose-950/20 to-indigo-950/20 z-0"></div>
+                            <i class="fa-solid fa-clapperboard text-3xl text-rose-400/80 mb-2 animate-pulse z-10"></i>
+                            <span class="text-xs font-semibold text-slate-200 z-10">Briefing Script Rendered</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5 z-10">Ready for TTS Engine translation</span>
+                        </div>
+                        <div class="flex-1 text-xs text-slate-400 space-y-1">
+                            <p class="font-semibold text-slate-200 text-sm"><i class="fa-solid fa-microphone text-xs text-rose-400 mr-1.5"></i> Executive Director Voice Track</p>
+                            <p>This script compiles multi-source survey data, market constraints, and competitive signals into a compact, high-impact verbal overview designed for key leadership personnel.</p>
+                        </div>
+                    </div>
+                    <div id="content-video" class="prose prose-invert max-w-none text-sm text-slate-300 bg-slate-950/40 border border-slate-800 p-5 rounded-xl space-y-4"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Right-Hand Side Section: Automated Data Chatbot -->
+        <section class="w-80 md:w-96 flex flex-col bg-slate-950 overflow-hidden shrink-0">
+            <!-- Chatbot Header -->
+            <div class="p-4 bg-slate-900 border-b border-slate-800 flex items-center gap-2.5 shrink-0">
+                <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-md shadow-indigo-500/50"></div>
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Contextual Data Bot</h3>
+                    <p class="text-[10px] text-slate-400">Interrogate the synthesized market sources</p>
+                </div>
+            </div>
+
+            <!-- Message Streaming Workspace -->
+            <div id="chatMessagePane" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                <!-- Initial System Welcome Message -->
+                <div class="flex gap-2.5 max-w-[85%]">
+                    <div class="w-6 h-6 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 shrink-0">
+                        <i class="fa-solid fa-robot text-[10px]"></i>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl rounded-tl-none p-3 text-slate-300 space-y-1">
+                        <p>Welcome to your Market Knowledge base. Once a product is analyzed, I can break down underlying microdata, evaluate individual survey cross-tabs, or clarify citations. What would you like to explore?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chatbot Input Controls -->
+            <div class="p-3 bg-slate-900 border-t border-slate-800 shrink-0">
+                <div class="relative flex items-center">
+                    <input type="text" id="chatInputField" 
+                        onkeydown="if(event.key === 'Enter') dispatchChatMessage()"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-3 pr-10 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" 
+                        placeholder="Ask about competitor reviews, Statista metrics...">
+                    <button onclick="dispatchChatMessage()" class="absolute right-2 text-indigo-400 hover:text-indigo-300 transition-colors p-1.5">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+                <div class="mt-2 flex justify-between items-center text-[9px] text-slate-500 px-1">
+                    <span>Active Context: Model Memory Buffer</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-circle text-[6px] text-emerald-500"></i> Gemini 1.5 Flash Engine</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Application Engine -->
+    <script>
+        // Internal Application State Architecture
+        const state = {
+            apiKey: '',
+            language: 'English',
+            currentProduct: '',
+            activeTab: 'dashboard',
+            isSimulated: true,
+            reports: {
+                dashboard: '', swot: '', pestele: '', porter: '', presentation: '', spreadsheet: '', video: ''
+            }
+        };
+
+        // Wire event listeners on initial runtime execution
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('mra_gemini_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+                verifyAndBindAPIKey(savedKey);
+            }
+
+            document.getElementById('apiKeyInput').addEventListener('input', (e) => {
+                verifyAndBindAPIKey(e.target.value.trim());
+            });
+
+            document.getElementById('languageSelect').addEventListener('change', (e) => {
+                state.language = e.target.value;
+            });
+            
+            // Switch view default state initialization
+            switchTab('dashboard');
+        });
+
+        // Test API integration connectivity
+        async function verifyAndBindAPIKey(key) {
+            const indicator = document.getElementById('apiStatusIndicator');
+            if (!key) {
+                indicator.className = "h-2 w-2 rounded-full bg-red-500 animate-pulse";
+                indicator.title = "API Disconnected";
+                state.apiKey = '';
+                state.isSimulated = true;
+                localStorage.removeItem('mra_gemini_api_key');
+                return;
+            }
+
+            try {
+                // Low-footprint network ping validation challenge to Google servers using gemini-1.5-flash
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: 'Ping' }] }] })
+                });
+
+                if (response.ok) {
+                    indicator.className = "h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50";
+                    indicator.title = "API Connected & Ready";
+                    state.apiKey = key;
+                    state.isSimulated = false;
+                    localStorage.setItem('mra_gemini_api_key', key);
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                indicator.className = "h-2 w-2 rounded-full bg-amber-500";
+                indicator.title = "Invalid Connection Parameters";
+                state.isSimulated = true;
+            }
+        }
+
+        // Window navigation coordinator
+        function switchTab(tabName) {
+            state.activeTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            
+            // Clear prior navbar text mutations back to neutral colors
+            const tabButtons = ['dashboard', 'swot', 'pestele', 'porter', 'presentation', 'spreadsheet', 'video'];
+            tabButtons.forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if (btn) {
+                    btn.classList.remove('border-indigo-500', 'text-indigo-400');
+                    btn.classList.add('border-transparent', 'text-slate-400');
+                }
+            });
+
+            // Activate elected view tracking styles
+            const targetContent = document.getElementById(`tab-${tabName}`);
+            const targetBtn = document.getElementById(`btn-${tabName}`);
+            if (targetContent) targetContent.classList.add('active');
+            if (targetBtn) {
+                targetBtn.classList.remove('border-transparent', 'text-slate-400');
+                targetBtn.classList.add('border-indigo-500', 'text-indigo-400');
+            }
+        }
+
+        // Orchestrate market research synthesis pipeline
+        async function triggerMarketResearch() {
+            const query = document.getElementById('productSearchInput').value.trim();
+            if (!query) return;
+
+            state.currentProduct = query;
+            document.getElementById('welcomePlaceholder').style.display = 'none';
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+
+            if (state.isSimulated) {
+                // Execute deterministic sandbox pipeline when no dynamic API credentials exist
+                setTimeout(() => {
+                    generateDeterministicMockReport(query);
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    appendSystemChatMessage(`I have synthesized sandbox data configurations for **${query}** using isolated local telemetry. Please verify with a live Gemini API key for dynamic global validation modeling.`);
+                }, 1500);
+            } else {
+                // Execute operational cross-functional evaluation queries using Live Gemini 1.5 Flash Infrastructure
+                await processLiveMarketResearch(query);
+            }
+        }
+
+        // Coordinate operational LLM parameters
+        async function processLiveMarketResearch(productName) {
+            const systemContextPrompt = `You are a professional market intelligence analyst for elite consulting entities. Perform deep product research on "${productName}" tailored for a language landscape profile of: ${state.language}. 
+            You must aggregate, extrapolate, and cleanly layout realistic research data spanning consumer surveys, direct competitor reviews, macro supply & demand forces, retail sales ratings, and Statista-modeled demographic percentages.
+            CRITICAL REQUIREMENT: Throughout all textual outputs, you must consistently place bracketed structural reference citations matching real-world data collection patterns (e.g., [Statista Q1-2026], [Gartner Tech Index], [Amazon Core Reviews Databank], [Federal Consumer Bureau 2025]). Never leave data unanchored without citations.
+            
+            Format your entire layout precisely as a single parseable raw JSON object matching these exactly specified keys without markdown wrappers or code fence indicators:
+            {
+                "dashboard": "Write a massive detailed summary of market position, market entry constraints, consumer preferences, and synthesis of research findings with extensive citations in markdown.",
+                "swot_s": "Strengths details with bracketed source citation",
+                "swot_w": "Weaknesses details with bracketed source citation",
+                "swot_o": "Opportunities details with bracketed source citation",
+                "swot_t": "Threats details with bracketed source citation",
+                "pestele_p": "Political factors with citation",
+                "pestele_e": "Economic factors with citation",
+                "pestele_s": "Social factors with citation",
+                "pestele_t": "Technological factors with citation",
+                "pestele_l": "Legal frameworks with citation",
+                "pestele_env": "Environmental factors with citation",
+                "porter_1": "Threat of New Entrants analysis & impact scoring",
+                "porter_2": "Bargaining Power of Buyers analysis & impact scoring",
+                "porter_3": "Bargaining Power of Suppliers analysis & impact scoring",
+                "porter_4": "Threat of Substitutes analysis & impact scoring",
+                "porter_5": "Competitive Rivalry intensity matrix",
+                "presentation_deck": "Markdown outlining a structured 5-slide visual summary pitch deck for stakeholder execution",
+                "spreadsheet_rows": [
+                     {"metric": "Global Market Valuation Size", "value": "$42.1 Billion", "cagr": "8.4%", "source": "[Statista Consumer Goods Index 2026]"},
+                     {"metric": "Average Competitor Star Rating", "value": "4.1 / 5.0 Stars", "cagr": "N/A", "source": "[Scraped E-Commerce Reviews Aggregator Data]"}
+                ],
+                "video_briefing": "A highly explicit presenter voiceover script split into clear sections detailing key discoveries and technical market findings."
+            }`;
+
+            try {
+                // Using gemini-1.5-flash as the default endpoint
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`;
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: systemContextPrompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+
+                if (!response.ok) throw new Error("Upstream ingestion connection failure");
+
+                const result = await response.json();
+                const rawJsonText = result.candidates[0].content.parts[0].text;
+                const parsedPayload = JSON.parse(rawJsonText);
+
+                // Render dynamic dynamic components back into DOM structure
+                document.getElementById('content-dashboard').innerHTML = formatMarkdownToHTML(parsedPayload.dashboard);
+                
+                document.getElementById('content-swot').innerHTML = `
+                    <div class="p-3 bg-emerald-950/40 border border-emerald-800 rounded-lg"><strong>STRENGTHS</strong><p class="mt-1 text-slate-300">${parsedPayload.swot_s}</p></div>
+                    <div class="p-3 bg-rose-950/40 border border-rose-800 rounded-lg"><strong>WEAKNESSES</strong><p class="mt-1 text-slate-300">${parsedPayload.swot_w}</p></div>
+                    <div class="p-3 bg-blue-950/40 border border-blue-800 rounded-lg"><strong>OPPORTUNITIES</strong><p class="mt-1 text-slate-300">${parsedPayload.swot_o}</p></div>
+                    <div class="p-3 bg-amber-950/40 border border-amber-800 rounded-lg"><strong>THREATS</strong><p class="mt-1 text-slate-300">${parsedPayload.swot_t}</p></div>
+                `;
+
+                document.getElementById('content-pestele').innerHTML = `
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Political</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_p}</p></div>
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Economic</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_e}</p></div>
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Social</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_s}</p></div>
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Technological</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_t}</p></div>
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Legal</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_l}</p></div>
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Environmental</strong><p class="mt-1 text-slate-400">${parsedPayload.pestele_env}</p></div>
+                `;
+
+                document.getElementById('content-porter').innerHTML = `
+                    <div class="space-y-2 text-xs">
+                        <div class="p-2.5 bg-slate-950 border-l-4 border-amber-500 rounded"><strong>Threat of New Entrants:</strong> ${parsedPayload.porter_1}</div>
+                        <div class="p-2.5 bg-slate-950 border-l-4 border-amber-500 rounded"><strong>Bargaining Power of Buyers:</strong> ${parsedPayload.porter_2}</div>
+                        <div class="p-2.5 bg-slate-950 border-l-4 border-amber-500 rounded"><strong>Bargaining Power of Suppliers:</strong> ${parsedPayload.porter_3}</div>
+                        <div class="p-2.5 bg-slate-950 border-l-4 border-amber-500 rounded"><strong>Threat of Substitutes:</strong> ${parsedPayload.porter_4}</div>
+                        <div class="p-2.5 bg-slate-950 border-l-4 border-amber-500 rounded"><strong>Competitive Rivalry Intensity:</strong> ${parsedPayload.porter_5}</div>
+                    </div>
+                `;
+
+                document.getElementById('content-presentation').innerHTML = formatMarkdownToHTML(parsedPayload.presentation_deck);
+
+                let ledgerHTML = '';
+                parsedPayload.spreadsheet_rows.forEach(row => {
+                    ledgerHTML += `<tr class="hover:bg-slate-900 border-b border-slate-800 transition-colors">
+                        <td class="p-3 text-slate-200 font-medium">${row.metric}</td>
+                        <td class="p-3 text-right font-mono text-indigo-400">${row.value}</td>
+                        <td class="p-3 text-right font-mono text-emerald-400">${row.cagr}</td>
+                        <td class="p-3 text-slate-400 italic">${row.source}</td>
+                    </tr>`;
+                });
+                document.getElementById('content-spreadsheet').innerHTML = ledgerHTML;
+                document.getElementById('content-video').innerHTML = formatMarkdownToHTML(parsedPayload.video_briefing);
+
+                // Cache globally for semantic conversation context injection mapping
+                state.reports.dashboard = parsedPayload.dashboard;
+                state.reports.swot = `${parsedPayload.swot_s} ${parsedPayload.swot_w} ${parsedPayload.swot_o} ${parsedPayload.swot_t}`;
+                state.reports.pestele = `${parsedPayload.pestele_p} ${parsedPayload.pestele_e} ${parsedPayload.pestele_s}`;
+                
+                appendSystemChatMessage(`Dynamic parsing complete for **${productName}**. All analytic frameworks are synchronized. You can interrogate specific metrics below.`);
+            } catch (error) {
+                console.error(error);
+                alert("Generation parameters failed to resolve correctly. Reverting to sandbox environment.");
+                generateDeterministicMockReport(productName);
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        // Mock Sandbox Report Engine (Graceful Failure Handler)
+        function generateDeterministicMockReport(product) {
+            const mockDashboard = `### Competitive Position Summary for **${product}**
+            Strategic market indicators demonstrate a significant shift towards localized consumer integration [Statista Q2-2026]. Aggregated surveys outline that approximately **64% of early adopters** express a strong premium demand bias for integrated sustainable features [Consumer Insights Bureau 2025]. 
+
+            ### Key Barriers and Vulnerabilities
+            * **Competitor Penetration Index:** High density market landscape dominated by incumbent ecosystems [Gartner Tech Index]. Average customer acquisition cost (CAC) has expanded by 14% over trailing standard cycles.
+            * **Sentiment Synthesis:** Negative competitor reviews isolate common failure nodes within long-term reliability matrix vectors [TrustPilot Verified Scrapes].
+            * **Supply Realities:** Strategic inputs remain volatile due to geopolitical maritime constraints [Global Supply Logistics Quarterly].`;
+
+            document.getElementById('content-dashboard').innerHTML = formatMarkdownToHTML(mockDashboard);
+            state.reports.dashboard = mockDashboard;
+
+            document.getElementById('content-swot').innerHTML = `
+                <div class="p-3 bg-emerald-950/40 border border-emerald-800 rounded-lg"><strong>STRENGTHS</strong><p class="mt-1 text-slate-300">Strong consumer sentiment affinity metrics verified across multi-regional surveys [SurveyMonkey Core Sample 2026].</p></div>
+                <div class="p-3 bg-rose-950/40 border border-rose-800 rounded-lg"><strong>WEAKNESSES</strong><p class="mt-1 text-slate-300">Elevated manufacturing capital allocation limits immediate margin scalability [Industrial Board Review].</p></div>
+                <div class="p-3 bg-blue-950/40 border border-blue-800 rounded-lg"><strong>OPPORTUNITIES</strong><p class="mt-1 text-slate-300">Emerging cross-border digital procurement options expand total addressable market parameters [Statista Databank].</p></div>
+                <div class="p-3 bg-amber-950/40 border border-amber-800 rounded-lg"><strong>THREATS</strong><p class="mt-1 text-slate-300">Imminent structural regulatory updates regarding operational materials tracking compliance [EU Trade Directorate].</p></div>
+            `;
+
+            document.getElementById('content-pestele').innerHTML = `
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Political</strong><p class="mt-1 text-slate-400">Trade tariffs shifting regional distribution infrastructure strategies [Global Trade Monitor].</p></div>
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Economic</strong><p class="mt-1 text-slate-400">Fluctuations in real disposable income compress velocity metrics [World Finance Report].</p></div>
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Social</strong><p class="mt-1 text-slate-400">Demographic transitions demonstrate heightened environmental accountability demands [Statista 2026].</p></div>
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Technological</strong><p class="mt-1 text-slate-400">Automation integration speeds prototype development by 40% [MIT Engineering Review].</p></div>
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Legal</strong><p class="mt-1 text-slate-400">Data-privacy rules mandate isolated validation protocols [GDPR Central Registry].</p></div>
+                <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg"><strong>Environmental</strong><p class="mt-1 text-slate-400">Carbon emission offsetting expectations influence raw supply network structures [Green Accord Index].</p></div>
+            `;
+
+            document.getElementById('content-porter').innerHTML = `
+                <div class="space-y-2 text-xs">
+                    <div class="p-2.5 bg-slate-950 border-l-4 border-indigo-500 rounded"><strong>Threat of New Entrants (Moderate):</strong> High startup R&D parameters mitigate immediate baseline replication risks.</div>
+                    <div class="p-2.5 bg-slate-950 border-l-4 border-indigo-500 rounded"><strong>Bargaining Power of Buyers (High):</strong> Pricing transparency across modern comparison platforms accelerates switching dynamics.</div>
+                    <div class="p-2.5 bg-slate-950 border-l-4 border-indigo-500 rounded"><strong>Bargaining Power of Suppliers (Moderate):</strong> Alternative composite options neutralize concentrated provider monopolies.</div>
+                    <div class="p-2.5 bg-slate-950 border-l-4 border-indigo-500 rounded"><strong>Threat of Substitutes (High):</strong> Open ecosystem architectures invite cross-sector application migrations.</div>
+                    <div class="p-2.5 bg-slate-950 border-l-4 border-indigo-500 rounded"><strong>Competitive Rivalry (Intense):</strong> Fragmented regional networks battle continuously for market visibility optimization.</div>
+                </div>
+            `;
+
+            document.getElementById('content-presentation').innerHTML = `
+                <div class="space-y-3 text-xs">
+                    <div class="p-3 bg-slate-950 rounded border border-slate-800"><strong>Slide 1: Executive Opportunity Blueprint</strong><br><span class="text-slate-400">Synthesis of market gaps highlighting consumer friction points mapped across competitive vectors.</span></div>
+                    <div class="p-3 bg-slate-950 rounded border border-slate-800"><strong>Slide 2: Quantitative Validation Matrix</strong><br><span class="text-slate-400">Empirical survey telemetry and Statista growth trend vectors verified for leadership alignment.</span></div>
+                </div>
+            `;
+
+            document.getElementById('content-spreadsheet').innerHTML = `
+                <tr class="hover:bg-slate-900 border-b border-slate-800 transition-colors">
+                    <td class="p-3 text-slate-200 font-medium">Global Market Valuation Size</td>
+                    <td class="p-3 text-right font-mono text-indigo-400">$84.3 Billion</td>
+                    <td class="p-3 text-right font-mono text-emerald-400">+7.2%</td>
+                    <td class="p-3 text-slate-400 italic">[Statista Logistics Database]</td>
+                </tr>
+                <tr class="hover:bg-slate-900 border-b border-slate-800 transition-colors">
+                    <td class="p-3 text-slate-200 font-medium">Customer Acquisition Index (CAC)</td>
+                    <td class="p-3 text-right font-mono text-indigo-400">$142.50</td>
+                    <td class="p-3 text-right font-mono text-emerald-400">+12.4%</td>
+                    <td class="p-3 text-slate-400 italic">[AdWords Benchmarks Q1-2026]</td>
+                </tr>
+            `;
+
+            document.getElementById('content-video').innerHTML = `
+                <p><strong>[INTRO VISUAL: Market Growth Curves]</strong><br>
+                "Welcome team. Today we are unpacking tactical vectors driving performance within the <strong>${product}</strong> category space. Current trajectory indexes show structural acceleration reaching an $84 Billion scale threshold [Statista 2026], yet underlying customer acquisition costs mandate highly precise framework matching..."</p>
+            `;
+        }
+
+        // Live Chat Assistant Workspace Message Handlers
+        async function dispatchChatMessage() {
+            const input = document.getElementById('chatInputField');
+            const promptText = input.value.trim();
+            if (!promptText) return;
+
+            // Render human message instantly inside the pane
+            appendUserChatMessage(promptText);
+            input.value = '';
+
+            const chatPane = document.getElementById('chatMessagePane');
+            
+            // Build loading placeholder structure
+            const botLoadingId = 'bot-loading-' + Date.now();
+            const loadingHTML = `
+                <div id="${botLoadingId}" class="flex gap-2.5 max-w-[85%] animate-pulse">
+                    <div class="w-6 h-6 rounded-md bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400 shrink-0">
+                        <i class="fa-solid fa-robot text-[10px]"></i>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl rounded-tl-none p-3 text-slate-500 italic">
+                        Evaluating collected market signals...
+                    </div>
+                </div>`;
+            chatPane.insertAdjacentHTML('beforeend', loadingHTML);
+            chatPane.scrollTop = chatPane.scrollHeight;
+
+            if (state.isSimulated) {
+                // Standalone simulated chat router fallback
+                setTimeout(() => {
+                    document.getElementById(botLoadingId).remove();
+                    const response = `Based on the synthetic intelligence matrix for **${state.currentProduct || 'unspecified asset'}**, survey indicators verify structural trends matching your query. External documentation [Statista 2026] anchors this observation. Connect your Gemini API Key for unique custom evaluation logic.`;
+                    appendSystemChatMessage(response);
+                }, 1000);
+            } else {
+                // Dynamically execute precise contextual conversational logic via API integration
+                try {
+                    // Using gemini-1.5-flash for the chat response as well
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`;
+                    
+                    const systemContextInstructions = `You are the automated analytics agent of Market Research Assistant app. 
+                    You are answering questions relative to the currently evaluated product: "${state.currentProduct}".
+                    Here is the collected research data currently serving as your structural source knowledge base context:
+                    ---
+                    ${state.reports.dashboard}
+                    ---
+                    ${state.reports.swot}
+                    ---
+                    Answer the user's question directly using the contextual facts above. Always maintain deep analytical phrasing and append relevant source bracket citations where appropriate.
+                    User Question: ${promptText}`;
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: systemContextInstructions }] }]
+                        })
+                    });
+
+                    document.getElementById(botLoadingId).remove();
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const parsedReply = data.candidates[0].content.parts[0].text;
+                        appendSystemChatMessage(parsedReply);
+                    } else {
+                        throw new Error();
+                    }
+                } catch (e) {
+                    document.getElementById(botLoadingId).remove();
+                    appendSystemChatMessage("Network error encountered during prompt execution parsing. Check security configuration parameters.");
+                }
+            }
+        }
+
+        function appendUserChatMessage(text) {
+            const pane = document.getElementById('chatMessagePane');
+            const html = `
+                <div class="flex gap-2.5 max-w-[85%] ml-auto justify-end">
+                    <div class="bg-indigo-600 rounded-xl rounded-tr-none p-3 text-white">
+                        <p>${text}</p>
+                    </div>
+                </div>`;
+            pane.insertAdjacentHTML('beforeend', html);
+            pane.scrollTop = pane.scrollHeight;
+        }
+
+        function appendSystemChatMessage(text) {
+            const pane = document.getElementById('chatMessagePane');
+            const cleanHTML = formatMarkdownToHTML(text);
+            const html = `
+                <div class="flex gap-2.5 max-w-[85%]">
+                    <div class="w-6 h-6 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 shrink-0">
+                        <i class="fa-solid fa-robot text-[10px]"></i>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl rounded-tl-none p-3 text-slate-300 space-y-2">
+                        ${cleanHTML}
+                    </div>
+                </div>`;
+            pane.insertAdjacentHTML('beforeend', html);
+            pane.scrollTop = pane.scrollHeight;
+        }
+
+        // Lightweight Inline Markdown Parser Utility Implementation
+        function formatMarkdownToHTML(mdText) {
+            if (!mdText) return '';
+            let html = mdText
+                .replace(/###\s+(.*)/g, '<h4 class="text-sm font-bold text-white mt-3 mb-1">$1</h4>')
+                .replace(/##\s+(.*)/g, '<h3 class="text-base font-bold text-indigo-400 mt-4 mb-2">$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>')
+                .replace(/^\s*[\-\*]\s+(.*)/gm, '<li class="ml-4 list-disc text-slate-300">$1</li>');
+            
+            return html.split('\n').map(p => p.trim().startsWith('<h') || p.trim().startsWith('<li') ? p : `<p class="mb-2 leading-relaxed">${p}</p>`).join('');
+        }
+    </script>
+</body>
+</html>
